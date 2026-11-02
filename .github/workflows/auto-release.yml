@@ -137,7 +137,29 @@ jobs:
           ref: ${{ needs.detect-version.outputs.source_branch }}
           path: _game_src
           fetch-depth: 1
+      - name: Inject Touch-to-Mouse Patch
+        shell: bash
+        run: |
+          GAME_WEB_DIR="${{ github.workspace }}/_game_src/${{ needs.detect-version.outputs.web_dir }}"
 
+          cp ./scripts/touchPatch.js "$GAME_WEB_DIR/touchPatch.js"
+
+          python3 - "$GAME_WEB_DIR/index.html" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          html = path.read_text(encoding="utf-8")
+          tag = '<script src="touchPatch.js"></script>'
+
+          if tag not in html:
+              if "</body>" not in html:
+                  raise SystemExit("ERROR: Cannot find </body> in index.html")
+              html = html.replace("</body>", tag + "\n</body>", 1)
+              path.write_text(html, encoding="utf-8")
+
+          print("Touch-to-Mouse patch injected successfully.")
+          PY
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
